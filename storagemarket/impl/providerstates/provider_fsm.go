@@ -136,3 +136,8 @@ var ProviderStateEntryFuncs = fsm.StateEntryFuncs{
 	storagemarket.StorageDealActive:              RecordPieceInfo,
 	storagemarket.StorageDealFailing:             FailDeal,
 }
+
+var ProviderFinalityStates = []fsm.StateKey{
+	storagemarket.StorageDealError,
+	storagemarket.StorageDealCompleted,
+}

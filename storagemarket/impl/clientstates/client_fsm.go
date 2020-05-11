@@ -112,3 +112,8 @@ var ClientStateEntryFuncs = fsm.StateEntryFuncs{
 	storagemarket.StorageDealSealing:           VerifyDealActivated,
 	storagemarket.StorageDealFailing:           FailDeal,
 }
+
+var ClientFinalityStates = []fsm.StateKey{
+	storagemarket.StorageDealActive,
+	storagemarket.StorageDealError,
+}

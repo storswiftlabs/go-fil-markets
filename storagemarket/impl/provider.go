@@ -101,14 +101,11 @@ func NewProvider(net network.StorageMarketNetwork, ds datastore.Batching, bs blo
 		pubSub:               pubsub.New(providerDispatcher),
 	}
 
-	deals, err := fsm.New(namespace.Wrap(ds, datastore.NewKey(ProviderDsPrefix)), fsm.Parameters{
-		Environment:     &providerDealEnvironment{h},
-		StateType:       storagemarket.MinerDeal{},
-		StateKeyField:   "State",
-		Events:          providerstates.ProviderEvents,
-		StateEntryFuncs: providerstates.ProviderStateEntryFuncs,
-		Notifier:        h.dispatch,
-	})
+	deals, err := NewProviderStateMachine(
+		namespace.Wrap(ds, datastore.NewKey(ProviderDsPrefix)),
+		&providerDealEnvironment{h},
+		h.dispatch,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -347,6 +344,18 @@ func (p *Provider) dispatch(eventName fsm.EventName, deal fsm.StateType) {
 	if err := p.pubSub.Publish(pubSubEvt); err != nil {
 		log.Errorf("failed to publish event %d", evt)
 	}
+}
+
+func NewProviderStateMachine(ds datastore.Datastore, env fsm.Environment, notifier fsm.Notifier) (fsm.Group, error) {
+	return fsm.New(ds, fsm.Parameters{
+		Environment:     env,
+		StateType:       storagemarket.MinerDeal{},
+		StateKeyField:   "State",
+		Events:          providerstates.ProviderEvents,
+		StateEntryFuncs: providerstates.ProviderStateEntryFuncs,
+		FinalityStates:  providerstates.ProviderFinalityStates,
+		Notifier:        notifier,
+	})
 }
 
 type internalProviderEvent struct {
