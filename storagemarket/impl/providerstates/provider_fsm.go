@@ -120,6 +120,7 @@ var ProviderEvents = fsm.Events{
 			return nil
 		}),
 	fsm.Event(storagemarket.ProviderEventFailed).From(storagemarket.StorageDealFailing).To(storagemarket.StorageDealError),
+	fsm.Event(storagemarket.ProviderEventRestart).FromAny().ToNoChange(),
 }
 
 // ProviderStateEntryFuncs are the handlers for different states in a storage client

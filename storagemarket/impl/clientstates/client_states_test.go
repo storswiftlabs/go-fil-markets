@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/filecoin-project/go-address"
@@ -14,6 +15,7 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/builtin/market"
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
 	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/require"
 
@@ -311,6 +313,45 @@ func TestFailDeal(t *testing.T) {
 	})
 }
 
+func TestRestartEvent(t *testing.T) {
+	ds := datastore.NewMapDatastore()
+	cids := tut.GenerateCids(2)
+	id := cids[0]
+	mcid := cids[1]
+
+	node := makeNode(nodeParams{})
+	node.WaitForMessageNodeError = errors.New("node error") // keep the FSM from processing more
+
+	env := &fakeEnvironment{node: node}
+	wg := sync.WaitGroup{}
+
+	group, err := storageimpl.NewClientStateMachine(ds, env, func(eventName fsm.EventName, state fsm.StateType) {
+		if eventName.(storagemarket.ClientEvent) == storagemarket.ClientEventEnsureFundsFailed {
+			wg.Done()
+		}
+	})
+	require.NoError(t, err)
+
+	proposal := tut.MakeTestClientDealProposal()
+	deal, err := tut.MakeTestClientDeal(storagemarket.StorageDealClientFunding, proposal)
+	require.NoError(t, err)
+	deal.AddFundsCid = &mcid
+
+	// insert a deal in the Funding state
+	err = group.Begin(id, deal)
+	require.NoError(t, err)
+	require.Len(t, node.WaitForMessageCalls, 0)
+
+	// send a restart event
+	wg.Add(1)
+	err = group.Send(id, storagemarket.ClientEventRestart)
+	require.NoError(t, err)
+
+	// assert on some side effect of the Funding state entry fn
+	wg.Wait()
+	require.Len(t, node.WaitForMessageCalls, 1)
+}
+
 func TestFinalityStates(t *testing.T) {
 	group, err := storageimpl.NewClientStateMachine(nil, &fakeEnvironment{}, nil)
 	require.NoError(t, err)
@@ -384,7 +425,7 @@ type nodeParams struct {
 	DealCommittedAsyncError error
 }
 
-func makeNode(params nodeParams) storagemarket.StorageClientNode {
+func makeNode(params nodeParams) *testnodes.FakeClientNode {
 	var out testnodes.FakeClientNode
 	out.SMState = testnodes.NewStorageMarketState()
 	out.AddFundsCid = params.AddFundsCid

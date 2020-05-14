@@ -100,6 +100,7 @@ var ClientEvents = fsm.Events{
 		From(storagemarket.StorageDealSealing).To(storagemarket.StorageDealActive),
 	fsm.Event(storagemarket.ClientEventFailed).
 		From(storagemarket.StorageDealFailing).To(storagemarket.StorageDealError),
+	fsm.Event(storagemarket.ClientEventRestart).FromAny().ToNoChange(),
 }
 
 // ClientStateEntryFuncs are the handlers for different states in a storage client

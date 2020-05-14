@@ -5,7 +5,7 @@ import (
 	"github.com/filecoin-project/specs-actors/actors/runtime/exitcode"
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/go-fil-markets/storagemarket"
@@ -63,7 +63,6 @@ func WaitForFunding(ctx fsm.Context, environment ClientDealEnvironment, deal sto
 			return ctx.Trigger(storagemarket.ClientEventEnsureFundsFailed, xerrors.Errorf("AddFunds exit code: %s", code.String()))
 		}
 		return ctx.Trigger(storagemarket.ClientEventFundsEnsured)
-
 	})
 }
 
